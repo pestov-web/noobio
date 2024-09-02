@@ -6,7 +6,7 @@ from pynput import keyboard, mouse
 last_released_key = None  # Последняя отпущенная клавиша ('a' или 'd')
 hold_start_time = None  # Время начала удержания клавиши
 release_time = None  # Время отпускания клавиши
-release_timeout = 0.5  # Тайм-аут для ожидания нажатия мыши в секундах
+release_timeout = 0.3  # Тайм-аут для ожидания нажатия мыши в секундах
 
 # Генерация случайного времени удержания клавиши
 def random_hold_time():
