@@ -1,81 +1,78 @@
-import threading
 import time
 import random
-from pynput import keyboard
+from pynput import keyboard, mouse
 
-# Переменные для отслеживания состояния клавиш и блокировки
-a_pressed = False
-d_pressed = False
-shift_pressed = False
-listener_enabled = True  # Флаг для управления работой слушателя
+# Переменные для отслеживания состояния
+last_released_key = None  # Последняя отпущенная клавиша ('a' или 'd')
+hold_start_time = None  # Время начала удержания клавиши
+release_time = None  # Время отпускания клавиши
+release_timeout = 0.5  # Тайм-аут для ожидания нажатия мыши в секундах
 
-# Создаем контроллер клавиатуры один раз для повторного использования
-controller = keyboard.Controller()
+# Генерация случайного времени удержания клавиши
+def random_hold_time():
+    return random.uniform(0.058, 0.08)  # от 58 до 80 мс
 
-# Функция для эмуляции нажатия и удержания противоположной клавиши с рандомной задержкой
-def press_key(key):
-    global listener_enabled
-    listener_enabled = False  # Отключаем слушатель на время симуляции
+def press_opposite_key():
+    global last_released_key
+
+    if last_released_key == 'a':
+        opposite_key = 'd'
+    elif last_released_key == 'd':
+        opposite_key = 'a'
+    else:
+        return  # Ничего не делаем, если нет последней отпущенной клавиши
+
+    print(f"Simulating press of key '{opposite_key}'")
     
-    # Рандомная задержка перед отпусканием клавиши в интервале от 0.3 до 0.7 секунд
-    hold_time = random.uniform(0.3, 0.7)
+    # Эмулируем нажатие и удержание противоположной клавиши
+    with keyboard.Controller() as controller:
+        controller.press(opposite_key)
+        time.sleep(random_hold_time())  # Удерживаем клавишу случайное время
+        controller.release(opposite_key)
     
-    controller.press(key)
-    time.sleep(hold_time)  # Удерживаем клавишу на рандомное время
-    controller.release(key)
-    
-    # Дополнительная рандомная задержка перед включением слушателя
-    time.sleep(random.uniform(0.3, 0.7))
-    listener_enabled = True  # Включаем слушатель обратно
+    last_released_key = None  # Сбрасываем состояние после нажатия
 
-# Функция для запуска таймера и эмуляции нажатия противоположной клавиши с рандомным таймаутом
-def start_timer_and_press_opposite(key):
-    global shift_pressed
-    if shift_pressed:
-        return  # Если Shift зажат, не выполняем действия
-
-    # Рандомный тайм-аут в диапазоне от 0.2 до 0.6 секунд
-    random_timeout = random.uniform(0.2, 0.6)
-    
-    # Ждем случайный промежуток времени, а затем эмулируем нажатие
-    threading.Timer(random_timeout, lambda: press_key(key)).start()
-
-# Функция обработки нажатий клавиш
-def on_press(key):
-    global a_pressed, d_pressed, shift_pressed, listener_enabled
-    if not listener_enabled:  # Если слушатель отключен, игнорируем события
-        return
+# Обработчик нажатий клавиш
+def on_press_key(key):
+    global hold_start_time
 
     try:
-        if key.char == 'a':
-            a_pressed = True
-        elif key.char == 'd':
-            d_pressed = True
+        if key.char == 'a' or key.char == 'd':
+            hold_start_time = time.time()  # Запоминаем время начала удержания
     except AttributeError:
-        # Обрабатываем специальные клавиши, например Shift
-        if key == keyboard.Key.shift:
-            shift_pressed = True
+        pass
 
-# Функция обработки отпускания клавиш
-def on_release(key):
-    global a_pressed, d_pressed, shift_pressed, listener_enabled
-    if not listener_enabled:  # Если слушатель отключен, игнорируем события
-        return
+# Обработчик отпусканий клавиш
+def on_release_key(key):
+    global last_released_key, hold_start_time, release_time
 
     try:
-        if key.char == 'a':
-            a_pressed = False
-            if not shift_pressed:  # Если Shift не зажат
-                start_timer_and_press_opposite('d')  # Запускаем таймер для D
-        elif key.char == 'd':
-            d_pressed = False
-            if not shift_pressed:  # Если Shift не зажат
-                start_timer_and_press_opposite('a')  # Запускаем таймер для A
+        if key.char == 'a' or key.char == 'd':
+            if hold_start_time is not None:
+                hold_duration = (time.time() - hold_start_time) * 1000  # Длительность удержания в мс
+                print(f"Key '{key.char}' was held for: {hold_duration:.2f} ms")
+            last_released_key = key.char  # Запоминаем последнюю отпущенную клавишу
+            hold_start_time = None  # Сбрасываем время удержания
+            release_time = time.time()  # Запоминаем время отпускания
     except AttributeError:
-        # Обрабатываем специальные клавиши
-        if key == keyboard.Key.shift:
-            shift_pressed = False
+        pass
 
-# Запуск глобального слушателя клавиатуры
-with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-    listener.join()
+# Обработчик нажатия мыши
+def on_click(x, y, button, pressed):
+    global release_time
+
+    if button == mouse.Button.left and pressed:
+        if release_time is not None:
+            elapsed_time = time.time() - release_time
+            if elapsed_time <= release_timeout:
+                print("Left mouse button clicked within timeout")
+                press_opposite_key()  # Нажимаем противоположную клавишу при клике левой кнопки мыши
+            else:
+                print("Left mouse button clicked after timeout")
+        release_time = None  # Сбрасываем время отпускания
+
+# Запуск глобального слушателя клавиатуры и мыши
+with keyboard.Listener(on_press=on_press_key, on_release=on_release_key) as key_listener, \
+     mouse.Listener(on_click=on_click) as mouse_listener:
+    key_listener.join()
+    mouse_listener.join()
