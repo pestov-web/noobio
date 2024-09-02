@@ -9,12 +9,14 @@ shift_pressed = False
 timeout = 30  # Таймаут в секундах
 hold_time = 0.5  # Время удержания клавиши в секундах для "человеческого" эффекта
 
+# Создаем контроллер клавиатуры один раз для повторного использования
+controller = keyboard.Controller()
+
 # Функция для эмуляции нажатия и удержания противоположной клавиши
 def press_key(key):
-    with keyboard.Controller() as controller:
-        controller.press(key)
-        time.sleep(hold_time)  # Удерживаем клавишу на заданное время
-        controller.release(key)
+    controller.press(key)
+    time.sleep(hold_time)  # Удерживаем клавишу на заданное время
+    controller.release(key)
 
 # Функция для запуска таймера и эмуляции нажатия противоположной клавиши
 def start_timer_and_press_opposite(key):
