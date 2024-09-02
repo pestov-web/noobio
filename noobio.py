@@ -24,11 +24,16 @@ def press_opposite_key():
 
     print(f"Simulating press of key '{opposite_key}'")
     
-    # Эмулируем нажатие и удержание противоположной клавиши
-    with keyboard.Controller() as controller:
+    controller = keyboard.Controller()  # Создаем экземпляр контроллера
+    try:
         controller.press(opposite_key)
         time.sleep(random_hold_time())  # Удерживаем клавишу случайное время
         controller.release(opposite_key)
+    except Exception as e:
+        print(f"Error while simulating key press: {e}")
+    finally:
+        # Здесь мы ничего не закрываем, потому что 'Controller' не требует явного закрытия
+        pass
     
     last_released_key = None  # Сбрасываем состояние после нажатия
 
