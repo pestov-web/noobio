@@ -1,36 +1,44 @@
 import threading
 import time
+import random
 from pynput import keyboard
 
 # Переменные для отслеживания состояния клавиш и блокировки
 a_pressed = False
 d_pressed = False
 shift_pressed = False
-timeout = 5  # Таймаут в секундах (уменьшен до 5 секунд)
-hold_time = 0.5  # Время удержания клавиши в секундах для "человеческого" эффекта
 listener_enabled = True  # Флаг для управления работой слушателя
 
 # Создаем контроллер клавиатуры один раз для повторного использования
 controller = keyboard.Controller()
 
-# Функция для эмуляции нажатия и удержания противоположной клавиши
+# Функция для эмуляции нажатия и удержания противоположной клавиши с рандомной задержкой
 def press_key(key):
     global listener_enabled
     listener_enabled = False  # Отключаем слушатель на время симуляции
+    
+    # Рандомная задержка перед отпусканием клавиши в интервале от 0.3 до 0.7 секунд
+    hold_time = random.uniform(0.3, 0.7)
+    
     controller.press(key)
-    time.sleep(hold_time)  # Удерживаем клавишу на заданное время
+    time.sleep(hold_time)  # Удерживаем клавишу на рандомное время
     controller.release(key)
-    time.sleep(hold_time)  # Небольшая задержка перед включением слушателя
+    
+    # Дополнительная рандомная задержка перед включением слушателя
+    time.sleep(random.uniform(0.3, 0.7))
     listener_enabled = True  # Включаем слушатель обратно
 
-# Функция для запуска таймера и эмуляции нажатия противоположной клавиши
+# Функция для запуска таймера и эмуляции нажатия противоположной клавиши с рандомным таймаутом
 def start_timer_and_press_opposite(key):
     global shift_pressed
     if shift_pressed:
         return  # Если Shift зажат, не выполняем действия
 
-    # Ждем 5 секунд, а затем эмулируем нажатие
-    threading.Timer(timeout, lambda: press_key(key)).start()
+    # Рандомный тайм-аут в диапазоне от 0.2 до 0.6 секунд
+    random_timeout = random.uniform(0.2, 0.6)
+    
+    # Ждем случайный промежуток времени, а затем эмулируем нажатие
+    threading.Timer(random_timeout, lambda: press_key(key)).start()
 
 # Функция обработки нажатий клавиш
 def on_press(key):
